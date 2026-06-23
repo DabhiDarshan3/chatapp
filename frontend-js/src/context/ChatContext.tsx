@@ -110,7 +110,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [temporaryMessages, setTemporaryMessages] = useState<Message[]>([])
 
   // Sidebar
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768
+    }
+    return true
+  })
 
   // Toast
   const { toasts, addToast } = useToast()
