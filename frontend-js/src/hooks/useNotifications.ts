@@ -32,6 +32,7 @@ function showBrowserNotification(senderName: string, body: string, onClick?: () 
     body: body.length > 80 ? body.slice(0, 77) + '...' : body,
     icon: '/favicon.ico',
     tag: `dm-${senderName}`,      // same tag = replaces previous from same sender
+    // @ts-ignore
     renotify: true,
     silent: false,
   })
