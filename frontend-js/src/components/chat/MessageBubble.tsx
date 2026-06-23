@@ -21,6 +21,19 @@ export default function MessageBubble({ message, onRegenerate }: MessageBubblePr
       <div className="flex justify-end gap-3 mb-6 w-full group">
         <div className="max-w-[70%]">
           <div className="bg-[#2f2f2f] text-[#ececf1] px-5 py-3 rounded-3xl">
+            {message.attachments?.map((att, idx) => {
+              if (att.type === 'image_url' && att.image_url?.url) {
+                return (
+                  <img 
+                    key={idx} 
+                    src={att.image_url.url} 
+                    alt="Attachment" 
+                    className="max-w-full rounded-lg mb-2 max-h-64 object-contain"
+                  />
+                )
+              }
+              return null
+            })}
             <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </p>

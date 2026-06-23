@@ -14,6 +14,7 @@ interface StreamCallbacks {
 export async function streamMessage(
   conversationId: number,
   message: string,
+  image: string | undefined,
   callbacks: StreamCallbacks,
 ): Promise<void> {
   const res = await fetch(`/api/chat/${conversationId}/message`, {
@@ -24,7 +25,7 @@ export async function streamMessage(
       'Accept': 'text/event-stream',
       'X-CSRF-TOKEN': getCsrfToken(),
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, image }),
   })
 
   if (!res.ok) {
@@ -72,6 +73,7 @@ export async function streamMessage(
 
 export async function streamTemporaryMessage(
   message: string,
+  image: string | undefined,
   history: Message[],
   provider: string,
   model: string,
@@ -85,7 +87,7 @@ export async function streamTemporaryMessage(
       'Accept': 'text/event-stream',
       'X-CSRF-TOKEN': getCsrfToken(),
     },
-    body: JSON.stringify({ message, history, provider, model }),
+    body: JSON.stringify({ message, image, history, provider, model }),
   })
 
   if (!res.ok) {

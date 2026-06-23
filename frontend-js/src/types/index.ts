@@ -19,6 +19,7 @@ export interface Message {
   content: string
   created_at: string
   formatted_time?: string
+  attachments?: any[]
 }
 
 export interface ModelInfo {

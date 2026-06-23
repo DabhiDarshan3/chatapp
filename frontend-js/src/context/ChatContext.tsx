@@ -48,7 +48,7 @@ interface ChatContextType {
   streamingError: string | null
 
   // Send
-  sendMessage: (text: string) => Promise<void>
+  sendMessage: (text: string, image?: string) => Promise<void>
   regenerate: () => Promise<void>
 
   // Toast
@@ -248,10 +248,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [activeConversation, addToast])
 
   // Send message
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isStreaming) return
+  const sendMessage = useCallback(async (text: string, image?: string) => {
+    if ((!text.trim() && !image) || isStreaming) return
 
-    lastUserMsg.current = text
+    lastUserMsg.current = text // Need to rethink regenerate if image is used
 
     if (isTemporaryChat) {
       const userMsg: Message = {
@@ -259,6 +259,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         conversation_id: 0,
         role: 'user',
         content: text,
+        attachments: image ? [{ type: 'image_url', image_url: { url: image } }] : undefined,
         created_at: new Date().toISOString(),
       }
       setTemporaryMessages(prev => [...prev, userMsg])
@@ -269,7 +270,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       let fullText = ''
 
       import('../api/stream').then(({ streamTemporaryMessage }) => {
-        streamTemporaryMessage(text, temporaryMessages, selectedProvider, selectedModel, {
+        streamTemporaryMessage(text, image, temporaryMessages, selectedProvider, selectedModel, {
           onDelta: (delta) => {
             fullText += delta
             setStreamingText(fullText)
@@ -304,6 +305,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       conversation_id: activeConversation?.id ?? 0,
       role: 'user',
       content: text,
+      attachments: image ? [{ type: 'image_url', image_url: { url: image } }] : undefined,
       created_at: new Date().toISOString(),
     }
     setMessages(prev => [...prev, userMsg])
@@ -335,7 +337,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     let fullText = ''
 
-    await streamMessage(convId, text, {
+    await streamMessage(convId, text, image, {
       onDelta: (delta) => {
         fullText += delta
         setStreamingText(fullText)

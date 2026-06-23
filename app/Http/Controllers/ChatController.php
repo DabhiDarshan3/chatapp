@@ -136,12 +136,14 @@ class ChatController extends Controller
     public function sendMessage(Request $request, Conversation $conversation)
     {
         $request->validate([
-            'message' => 'required|string|max:32000',
+            'message' => 'nullable|string|max:32000',
+            'image'   => 'nullable|string',
         ]);
 
         $data =  $this->chatService->stream(
             $conversation,
-            $request->input('message')
+            $request->input('message') ?? '',
+            $request->input('image')
         );
         Log::info('$data');
         Log::info($data);
@@ -151,7 +153,8 @@ class ChatController extends Controller
     public function temporaryMessage(Request $request)
     {
         $request->validate([
-            'message'  => 'required|string|max:32000',
+            'message'  => 'nullable|string|max:32000',
+            'image'    => 'nullable|string',
             'history'  => 'nullable|array',
             'provider' => 'nullable|string',
             'model'    => 'nullable|string',
@@ -162,7 +165,8 @@ class ChatController extends Controller
         $model    = $request->input('model', env($envKey, 'gpt-4o'));
 
         return $this->chatService->streamTemporary(
-            $request->input('message'),
+            $request->input('message') ?? '',
+            $request->input('image'),
             $request->input('history', []),
             $provider,
             $model

@@ -76,13 +76,19 @@ class ChatService
 
     // ─── Stream Response ────────────────────────────────────────
 
-    public function stream(Conversation $conversation, string $userMessage)
+    public function stream(Conversation $conversation, string $userMessage, ?string $image = null)
     {
         // 1. Save user message
+        $attachments = [];
+        if ($image) {
+            $attachments[] = ['type' => 'image_url', 'image_url' => ['url' => $image]];
+        }
+
         Message::create([
             'conversation_id' => $conversation->id,
             'role'            => 'user',
             'content'         => $userMessage,
+            'attachments'     => $attachments,
         ]);
 
         // 2. Build full message history
@@ -184,7 +190,7 @@ class ChatService
 
     // ─── Stream Temporary Response ──────────────────────────────
 
-    public function streamTemporary(string $userMessage, array $historyData, string $provider, string $modelName)
+    public function streamTemporary(string $userMessage, ?string $image, array $historyData, string $provider, string $modelName)
     {
         // 1. Build history from provided array
         $history = collect($historyData)->map(function ($message) {
@@ -196,7 +202,11 @@ class ChatService
         })->toArray();
 
         // Append the current message
-        $history[] = new UserMessage($userMessage);
+        $attachments = [];
+        if ($image) {
+            $attachments[] = ['type' => 'image_url', 'image_url' => ['url' => $image]];
+        }
+        $history[] = new UserMessage($userMessage, $attachments);
 
         // 2. Default System Prompt
         $systemPrompt = 'You are a helpful, friendly, and highly knowledgeable AI assistant.
@@ -277,9 +287,9 @@ class ChatService
             ->get()
             ->map(function ($message) {
                 return match ($message->role) {
-                    'user'      => new UserMessage($message->content),
+                    'user'      => new UserMessage($message->content, $message->attachments ?? []),
                     'assistant' => new AssistantMessage($message->content),
-                    default     => new UserMessage($message->content),
+                    default     => new UserMessage($message->content, $message->attachments ?? []),
                 };
             })
             ->toArray();

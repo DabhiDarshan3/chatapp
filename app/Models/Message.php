@@ -18,10 +18,12 @@ class Message extends Model
         'input_tokens',
         'output_tokens',
         'meta',
+        'attachments',
     ];
 
     protected $casts = [
         'meta' => 'array',
+        'attachments' => 'array',
     ];
 
     // ─── Relationships ──────────────────────────────────────────
