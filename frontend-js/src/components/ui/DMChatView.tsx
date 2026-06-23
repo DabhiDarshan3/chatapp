@@ -19,7 +19,7 @@ interface DMessage {
   created_at: string
 }
 
-const EMOJIS = ['😀','😂','🥺','😍','🥰','😎','🤔','👍','🙏','🔥','✨','❤️','🎉','💔','💯']
+import EmojiPicker, { Theme } from 'emoji-picker-react'
 
 interface DMChatViewProps {
   peer: DMPeer
@@ -85,8 +85,8 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
   // ── Giphy API ──────────────────────────────────────────────────
   const searchGifs = useCallback(async (q: string) => {
     const endpoint = q 
-      ? `https://api.giphy.com/v1/gifs/search?api_key=GlVGYHqc3SyXXTzxR083whz4zqniR0pX&q=${encodeURIComponent(q)}&limit=20`
-      : `https://api.giphy.com/v1/gifs/trending?api_key=GlVGYHqc3SyXXTzxR083whz4zqniR0pX&limit=20`
+      ? `https://api.giphy.com/v1/gifs/search?api_key=jWTyzO4PMklXZdy6GBCzy4PzUdeQq7uU&q=${encodeURIComponent(q)}&limit=20`
+      : `https://api.giphy.com/v1/gifs/trending?api_key=jWTyzO4PMklXZdy6GBCzy4PzUdeQq7uU&limit=20`
     try {
       const res = await fetch(endpoint)
       const data = await res.json()
@@ -372,16 +372,15 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
             <div className="flex items-center gap-1 mb-1 mr-1 relative">
               {/* Emoji Picker Dropdown */}
               {isEmojiOpen && (
-                <div className="absolute bottom-12 right-0 bg-[#212121] border border-white/10 p-3 rounded-2xl shadow-2xl flex flex-wrap gap-2 w-64 z-50" style={{ animation: 'fadeSlideUp 0.2s ease-out' }}>
-                  {EMOJIS.map(em => (
-                    <button
-                      key={em}
-                      onClick={() => { setText(prev => prev + em); setIsEmojiOpen(false); textareaRef.current?.focus() }}
-                      className="text-xl hover:scale-125 transition-transform hover:bg-white/5 w-8 h-8 rounded-full flex items-center justify-center"
-                    >
-                      {em}
-                    </button>
-                  ))}
+                <div className="absolute bottom-12 right-0 z-50 shadow-2xl" style={{ animation: 'fadeSlideUp 0.2s ease-out' }}>
+                  <EmojiPicker
+                    theme={Theme.DARK}
+                    onEmojiClick={(emojiData) => {
+                      setText(prev => prev + emojiData.emoji)
+                      setIsEmojiOpen(false)
+                      textareaRef.current?.focus()
+                    }}
+                  />
                 </div>
               )}
               {/* GIF Modal */}
