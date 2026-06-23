@@ -48,7 +48,7 @@ RUN npm run build
 WORKDIR /var/www/html
 
 # Set Permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
 # Start Apache
-CMD php artisan migrate --force && apache2-foreground
+CMD touch database/database.sqlite && php artisan migrate --force && chown -R www-data:www-data /var/www/html/database && apache2-foreground
