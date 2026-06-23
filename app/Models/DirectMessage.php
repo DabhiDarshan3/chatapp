@@ -13,6 +13,7 @@ class DirectMessage extends Model
         'read_at' => 'datetime',
         'is_ai'       => 'boolean',
         'attachments' => 'array',
+        'body'        => \App\Casts\EncryptedFallback::class,
     ];
 
     public function sender(): BelongsTo

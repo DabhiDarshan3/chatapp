@@ -22,8 +22,9 @@ class Message extends Model
     ];
 
     protected $casts = [
-        'meta' => 'array',
+        'meta'        => 'array',
         'attachments' => 'array',
+        'content'     => \App\Casts\EncryptedFallback::class,
     ];
 
     // ─── Relationships ──────────────────────────────────────────
