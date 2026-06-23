@@ -19,18 +19,22 @@ export async function requestPermission(): Promise<boolean> {
   if (!('Notification' in window)) return false
   if (Notification.permission === 'granted') return true
   if (Notification.permission === 'denied') return false
-  const result = await Notification.requestPermission()
-  return result === 'granted'
+  
+  // Ask permission (aligned with user snippet)
+  return Notification.requestPermission().then(permission => {
+    console.log('Notification permission:', permission)
+    return permission === 'granted'
+  })
 }
 
 /**
  * Browser desktop notification dikhao
  */
-function showBrowserNotification(senderName: string, body: string, onClick?: () => void) {
+function showNotification(senderName: string, message: string, onClick?: () => void) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
-  const notif = new Notification(`💬 ${senderName}`, {
-    body: body.length > 80 ? body.slice(0, 77) + '...' : body,
-    icon: '/favicon.ico',
+  const notif = new Notification(`New Message from ${senderName}`, {
+    body: message.length > 80 ? message.slice(0, 77) + '...' : message,
+    icon: '/logo.png', // Fallback to favicon if logo missing
     tag: `dm-${senderName}`,      // same tag = replaces previous from same sender
     // @ts-ignore
     renotify: true,
@@ -97,7 +101,8 @@ export function useNotifications(
         // Agar user already us sender ke saath chat window mein hai → skip browser notif
         const isActivePeer = activePeerId === msg.sender_id
         if (!isActivePeer) {
-          showBrowserNotification(msg.sender_name, msg.body, () => {
+          // Show notification when a new message arrives (aligned with socket.on concept)
+          showNotification(msg.sender_name, msg.body, () => {
             window.dispatchEvent(new CustomEvent('open-user-chat', {
               detail: {
                 id: msg.sender_id,

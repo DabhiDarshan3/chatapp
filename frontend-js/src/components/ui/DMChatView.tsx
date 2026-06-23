@@ -14,8 +14,12 @@ interface DMessage {
   sender_id: number
   is_mine: boolean
   is_ai: boolean
+  attachments?: any[]
+  read_at?: string | null
   created_at: string
 }
+
+const EMOJIS = ['😀','😂','🥺','😍','🥰','😎','🤔','👍','🙏','🔥','✨','❤️','🎉','💔','💯']
 
 interface DMChatViewProps {
   peer: DMPeer
@@ -36,9 +40,14 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
   const [isSending, setIsSending] = useState(false)
   const [isAiThinking, setIsAiThinking] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isEmojiOpen, setIsEmojiOpen] = useState(false)
+  const [isGifOpen, setIsGifOpen] = useState(false)
+  const [gifSearch, setGifSearch] = useState('')
+  const [gifs, setGifs] = useState<string[]>([])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const peerColor = getAvatarColor(peer.name)
@@ -73,6 +82,22 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isAiThinking])
 
+  // ── Giphy API ──────────────────────────────────────────────────
+  const searchGifs = useCallback(async (q: string) => {
+    const endpoint = q 
+      ? `https://api.giphy.com/v1/gifs/search?api_key=GlVGYHqc3SyXXTzxR083whz4zqniR0pX&q=${encodeURIComponent(q)}&limit=20`
+      : `https://api.giphy.com/v1/gifs/trending?api_key=GlVGYHqc3SyXXTzxR083whz4zqniR0pX&limit=20`
+    try {
+      const res = await fetch(endpoint)
+      const data = await res.json()
+      setGifs(data.data.map((g: any) => g.images.fixed_height.url))
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    if (isGifOpen) searchGifs(gifSearch)
+  }, [isGifOpen, gifSearch, searchGifs])
+
   // ── Auto-resize textarea ───────────────────────────────────────
   useEffect(() => {
     const el = textareaRef.current
@@ -82,14 +107,17 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
   }, [text])
 
   // ── Send message ───────────────────────────────────────────────
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(async (attachment?: any) => {
     const trimmed = text.trim()
-    if (!trimmed || isSending) return
+    if ((!trimmed && !attachment) || isSending) return
     setIsSending(true)
     setText('')
+    setIsEmojiOpen(false)
+    setIsGifOpen(false)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
     const hasGpt = GPT_PATTERN.test(trimmed)
+    const attachmentsPayload = attachment ? [attachment] : undefined
 
     // Optimistic insert
     const optimistic: DMessage = {
@@ -98,6 +126,8 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
       sender_id: user?.id ?? 0,
       is_mine: true,
       is_ai: false,
+      attachments: attachmentsPayload,
+      read_at: null,
       created_at: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
     }
     setMessages(prev => [...prev, optimistic])
@@ -112,7 +142,7 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
           Accept: 'application/json',
           'X-CSRF-TOKEN': getCsrf(),
         },
-        body: JSON.stringify({ body: trimmed }),
+        body: JSON.stringify({ body: trimmed, attachments: attachmentsPayload }),
       })
 
       // 2. If @gpt detected — call AI endpoint
@@ -251,10 +281,29 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
                     </div>
                     <div className="flex flex-col items-end gap-0.5 max-w-[65%]">
                       <div className="bg-[#2f2f2f] text-[#ececf1] px-4 py-2.5 rounded-2xl rounded-br-sm text-[15px] leading-relaxed break-words">
+                        {msg.attachments?.map((att, idx) => {
+                          if (att.type === 'image_url' && att.image_url?.url) {
+                            return <img key={idx} src={att.image_url.url} alt="attachment" className="max-w-full rounded-lg mb-2 max-h-64 object-contain" />
+                          }
+                          return null
+                        })}
                         {/* highlight @gpt */}
-                        {renderBody(msg.body)}
+                        {msg.body && renderBody(msg.body)}
                       </div>
-                      <span className="text-[10px] text-gray-600 px-1">{msg.created_at}</span>
+                      <div className="flex items-center gap-1 px-1">
+                        <span className="text-[10px] text-gray-600">{msg.created_at}</span>
+                        <div className="flex-shrink-0">
+                          {msg.read_at ? (
+                            <svg className="w-[14px] h-[14px] text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 6L7 17l-5-5"/><path d="M22 10l-7.5 7.5L13 16"/>
+                            </svg>
+                          ) : (
+                            <svg className="w-[14px] h-[14px] text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )
@@ -272,7 +321,13 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
                   </div>
                   <div className="flex flex-col items-start gap-0.5 max-w-[65%]">
                     <div className="bg-[#383838] text-[#ececf1] px-4 py-2.5 rounded-2xl rounded-bl-sm text-[15px] leading-relaxed break-words">
-                      {msg.body}
+                      {msg.attachments?.map((att, idx) => {
+                        if (att.type === 'image_url' && att.image_url?.url) {
+                          return <img key={idx} src={att.image_url.url} alt="attachment" className="max-w-full rounded-lg mb-2 max-h-64 object-contain" />
+                        }
+                        return null
+                      })}
+                      {msg.body && msg.body}
                     </div>
                     <span className="text-[10px] text-gray-600 px-1">{msg.created_at}</span>
                   </div>
@@ -314,9 +369,93 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
               placeholder={`Message ${peer.name}… (use @gpt for AI reply)`}
               className="w-full bg-transparent text-[#ececf1] placeholder-gray-400 text-[15px] px-3 py-2.5 resize-none outline-none leading-relaxed max-h-[180px]"
             />
-            <div className="flex items-center gap-1 mb-1 mr-1">
+            <div className="flex items-center gap-1 mb-1 mr-1 relative">
+              {/* Emoji Picker Dropdown */}
+              {isEmojiOpen && (
+                <div className="absolute bottom-12 right-0 bg-[#212121] border border-white/10 p-3 rounded-2xl shadow-2xl flex flex-wrap gap-2 w-64 z-50" style={{ animation: 'fadeSlideUp 0.2s ease-out' }}>
+                  {EMOJIS.map(em => (
+                    <button
+                      key={em}
+                      onClick={() => { setText(prev => prev + em); setIsEmojiOpen(false); textareaRef.current?.focus() }}
+                      className="text-xl hover:scale-125 transition-transform hover:bg-white/5 w-8 h-8 rounded-full flex items-center justify-center"
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* GIF Modal */}
+              {isGifOpen && (
+                <div className="absolute bottom-12 right-0 bg-[#212121] border border-white/10 rounded-2xl shadow-2xl w-72 h-80 flex flex-col z-50 overflow-hidden" style={{ animation: 'fadeSlideUp 0.2s ease-out' }}>
+                  <div className="p-2 border-b border-white/10">
+                    <input
+                      type="text"
+                      placeholder="Search GIFs..."
+                      value={gifSearch}
+                      onChange={(e) => setGifSearch(e.target.value)}
+                      className="w-full bg-[#111] text-white text-sm px-3 py-2 rounded-lg outline-none border border-white/10 focus:border-white/30 transition-colors"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-2">
+                    {gifs.map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt="GIF"
+                        className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => handleSend({ type: 'image_url', image_url: { url } })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* GIF Button */}
               <button
-                onClick={handleSend}
+                onClick={() => { setIsGifOpen(!isGifOpen); setIsEmojiOpen(false); }}
+                className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full font-bold text-[10px] transition-colors ${isGifOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                title="Send GIF"
+              >
+                GIF
+              </button>
+              {/* Image Upload Button */}
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = (ev) => handleSend({ type: 'image_url', image_url: { url: ev.target?.result as string } })
+                  reader.readAsDataURL(file)
+                  e.target.value = ''
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                title="Send Photo"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+
+              {/* Emoji Button */}
+              <button
+                onClick={() => { setIsEmojiOpen(!isEmojiOpen); setIsGifOpen(false); }}
+                className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-colors ${isEmojiOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                title="Add emoji"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+              
+              <button
+                onClick={() => handleSend()}
                 disabled={!hasText || isSending}
                 className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-colors
                   ${hasText && !isSending

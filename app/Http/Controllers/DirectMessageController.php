@@ -39,6 +39,8 @@ class DirectMessageController extends Controller
                 'sender_id'  => $m->sender_id,
                 'is_mine'    => $m->sender_id === $me,
                 'is_ai'      => (bool) $m->is_ai,
+                'attachments'=> $m->attachments,
+                'read_at'    => $m->read_at ? $m->read_at->format('Y-m-d H:i:s') : null,
                 'created_at' => $m->created_at->format('H:i'),
                 'date'       => $m->created_at->diffForHumans(),
             ]);
@@ -52,7 +54,14 @@ class DirectMessageController extends Controller
      */
     public function store(Request $request, int $userId): JsonResponse
     {
-        $data = $request->validate(['body' => 'required|string|max:5000']);
+        $data = $request->validate([
+            'body'        => 'nullable|string|max:5000',
+            'attachments' => 'nullable|array',
+        ]);
+
+        if (empty($data['body']) && empty($data['attachments'])) {
+            return response()->json(['error' => 'Message or attachment required'], 422);
+        }
 
         $me = Auth::user();
         $receiver = User::findOrFail($userId);
@@ -60,7 +69,8 @@ class DirectMessageController extends Controller
         $msg = DirectMessage::create([
             'sender_id'   => $me->id,
             'receiver_id' => $receiver->id,
-            'body'        => $data['body'],
+            'body'        => $data['body'] ?? '',
+            'attachments' => $data['attachments'] ?? null,
         ]);
 
         return response()->json([
@@ -69,6 +79,8 @@ class DirectMessageController extends Controller
             'sender_id'  => $msg->sender_id,
             'is_mine'    => true,
             'is_ai'      => false,
+            'attachments'=> $msg->attachments,
+            'read_at'    => null,
             'created_at' => $msg->created_at->format('H:i'),
             'date'       => $msg->created_at->diffForHumans(),
         ], 201);
@@ -89,18 +101,44 @@ class DirectMessageController extends Controller
         $me       = Auth::user();
         $receiver = User::findOrFail($userId);
 
-        // Build history for AI context (last 10 messages)
-        $history = collect($data['history'] ?? [])
+        $rawHistory = collect($data['history'] ?? [])
             ->takeRight(10)
             ->map(fn($m) => [
-                'role'    => $m['is_mine'] ? 'user' : 'model',
-                'parts'   => [['text' => $m['body']]],
+                'role' => $m['is_mine'] ? 'user' : 'model',
+                'text' => $m['body'],
             ])
             ->values()
             ->toArray();
 
+        // Gemini strict alternating roles: Combine consecutive identical roles
+        $mergedHistory = [];
+        foreach ($rawHistory as $msg) {
+            $lastIndex = count($mergedHistory) - 1;
+            if ($lastIndex >= 0 && $mergedHistory[$lastIndex]['role'] === $msg['role']) {
+                $mergedHistory[$lastIndex]['parts'][0]['text'] .= "\n\n" . $msg['text'];
+            } else {
+                $mergedHistory[] = [
+                    'role'  => $msg['role'],
+                    'parts' => [['text' => $msg['text']]],
+                ];
+            }
+        }
+
         // Remove @gpt from prompt for AI
         $cleanPrompt = trim(preg_replace('/@gpt\b/i', '', $data['prompt']));
+        if (empty($cleanPrompt)) {
+            $cleanPrompt = 'Hello';
+        }
+
+        $lastIndex = count($mergedHistory) - 1;
+        if ($lastIndex >= 0 && $mergedHistory[$lastIndex]['role'] === 'user') {
+            $mergedHistory[$lastIndex]['parts'][0]['text'] .= "\n\n" . $cleanPrompt;
+            $contents = $mergedHistory;
+        } else {
+            $contents = array_merge($mergedHistory, [
+                ['role' => 'user', 'parts' => [['text' => $cleanPrompt]]]
+            ]);
+        }
 
         // Call Gemini (reuse config from ai.php)
         $aiConfig   = config('ai');
@@ -109,17 +147,21 @@ class DirectMessageController extends Controller
         $endpoint   = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
         $payload = [
-            'contents' => array_merge($history, [
-                ['role' => 'user', 'parts' => [['text' => $cleanPrompt]]]
-            ]),
+            'contents' => $contents,
             'generationConfig' => ['maxOutputTokens' => 1024],
         ];
 
         try {
             $response = Http::timeout(30)->post($endpoint, $payload);
-            $aiText   = $response->json('candidates.0.content.parts.0.text') ?? 'Sorry, I could not generate a response.';
+            if ($response->failed()) {
+                \Log::error('Gemini API Error: ' . $response->body());
+                $aiText = 'Sorry, AI is unavailable right now. (API Error)';
+            } else {
+                $aiText = $response->json('candidates.0.content.parts.0.text') ?? 'Sorry, I could not generate a response.';
+            }
         } catch (\Throwable $e) {
-            $aiText = 'AI is unavailable right now.';
+            \Log::error('Gemini API Exception: ' . $e->getMessage());
+            $aiText = 'AI connection failed.';
         }
 
         // Store AI response — visible to both users:
