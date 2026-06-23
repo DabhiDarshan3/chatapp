@@ -28,16 +28,26 @@
 .dot-3 { animation: dotBounce 1.2s ease-in-out infinite .30s; }
 
 /* ── Sidebar Transition ────────────────────────────────────────── */
+/* Sidebar Animation */
 .sidebar-panel {
-    transition: transform .3s cubic-bezier(.4,0,.2,1),
-                width .3s cubic-bezier(.4,0,.2,1),
-                min-width .3s cubic-bezier(.4,0,.2,1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease, min-width 0.3s ease;
 }
-.sidebar-panel.collapsed {
-    transform: translateX(-100%);
-    width: 0 !important;
-    min-width: 0 !important;
-    overflow: hidden;
+
+/* On Desktop: Collapse shrinks the width to 0 */
+@media (min-width: 768px) {
+    .sidebar-panel.collapsed {
+        width: 0 !important;
+        min-width: 0 !important;
+        overflow: hidden;
+        border: none;
+    }
+}
+
+/* On Mobile: Collapse slides it off-screen to the left */
+@media (max-width: 767px) {
+    .sidebar-panel.collapsed {
+        transform: translateX(-100%);
+    }
 }
 
 /* ── Active Conversation ───────────────────────────────────────── */

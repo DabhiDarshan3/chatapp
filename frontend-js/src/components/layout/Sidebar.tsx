@@ -32,11 +32,20 @@ export default function Sidebar() {
   }
 
   return (
-    <aside
-      className={`sidebar-panel relative flex flex-col w-[260px] min-w-[260px] bg-[#171717] z-40 h-full
-                  ${sidebarOpen ? '' : 'collapsed'}`}
-    >
-      {/* Top Section */}
+    <>
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity"
+          onClick={toggleSidebar}
+        />
+      )}
+
+      <aside
+        className={`sidebar-panel fixed md:relative flex flex-col w-[260px] min-w-[260px] bg-[#171717] z-50 md:z-40 h-full top-0 left-0
+                    ${sidebarOpen ? '' : 'collapsed'}`}
+      >
+        {/* Top Section */}
       <div className="flex items-center justify-between px-3 pt-3.5 pb-2">
         <button
           onClick={toggleSidebar}
@@ -209,6 +218,7 @@ export default function Sidebar() {
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <UsersPanel isOpen={isUsersPanelOpen} onClose={() => setIsUsersPanelOpen(false)} />
     </aside>
+    </>
   )
 }
 
