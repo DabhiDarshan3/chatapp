@@ -15,7 +15,7 @@ const POLL_INTERVAL = 5000 // 5 seconds
 /**
  * Browser notification permission request karo
  */
-async function requestPermission(): Promise<boolean> {
+export async function requestPermission(): Promise<boolean> {
   if (!('Notification' in window)) return false
   if (Notification.permission === 'granted') return true
   if (Notification.permission === 'denied') return false
@@ -43,6 +43,17 @@ function showBrowserNotification(senderName: string, body: string, onClick?: () 
   }
   // Auto-close after 6 seconds
   setTimeout(() => notif.close(), 6000)
+}
+
+function playNotificationSound() {
+  try {
+    // A tiny base64 encoded beep sound (100ms) to avoid needing external files
+    const beep = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU' + 'A'.repeat(50)
+    const audio = new Audio(beep) 
+    audio.volume = 0.5
+    // Some browsers block audio if user hasn't interacted, catch it
+    audio.play().catch(() => {})
+  } catch (e) {}
 }
 
 /**
@@ -95,6 +106,7 @@ export function useNotifications(
               }
             }))
           })
+          playNotificationSound()
           onNewMessage(msg)
         }
       }

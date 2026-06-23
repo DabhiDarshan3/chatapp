@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { requestPermission } from '../../hooks/useNotifications'
 
 type Step = 'email' | 'password' | 'register'
 
@@ -53,6 +54,8 @@ export default function AuthModal() {
     setIsLoading(true)
     try {
       await login(email, password)
+      // Request notification permission after successful login (requires user gesture)
+      requestPermission().catch(() => {})
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid password.')
     } finally {
@@ -69,6 +72,8 @@ export default function AuthModal() {
     setIsLoading(true)
     try {
       await register(email, password)
+      // Request notification permission after successful registration
+      requestPermission().catch(() => {})
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed.')
     } finally {

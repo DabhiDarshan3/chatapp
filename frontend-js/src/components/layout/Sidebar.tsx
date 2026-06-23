@@ -6,6 +6,7 @@ import { useState } from 'react'
 import SearchModal from '../ui/SearchModal'
 import UsersPanel from '../ui/UsersPanel'
 import { getAvatarColor, getAvatarInitial } from '../../utils/avatarColor'
+import { requestPermission } from '../../hooks/useNotifications'
 
 export default function Sidebar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -99,7 +100,11 @@ export default function Sidebar() {
                 {item.text === 'More' && isMoreOpen && (
                   <div className="pl-6 pr-2 mt-0.5 flex flex-col gap-0.5">
                     <button
-                      onClick={() => { setIsUsersPanelOpen(true); if (window.innerWidth < 768) toggleSidebar(); }}
+                      onClick={() => { 
+                        setIsUsersPanelOpen(true); 
+                        if (window.innerWidth < 768) toggleSidebar(); 
+                        requestPermission().catch(() => {});
+                      }}
                       className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#202123] text-gray-300 hover:text-white transition-colors"
                     >
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

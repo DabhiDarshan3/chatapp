@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { UnreadMessage } from '../../hooks/useNotifications'
 import { getAvatarColor, getAvatarInitial } from '../../utils/avatarColor'
+import { requestPermission } from '../../hooks/useNotifications'
 
 interface NotificationBadgeProps {
   notifications: UnreadMessage[]
@@ -107,7 +108,10 @@ export default function NotificationBadge({ notifications, onOpen, onClear }: No
 
         {/* Floating bell button */}
         <button
-          onClick={() => setIsOpen(v => !v)}
+          onClick={() => {
+            setIsOpen(v => !v);
+            requestPermission().catch(() => {});
+          }}
           className="relative w-12 h-12 bg-blue-600 hover:bg-blue-500 rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
           title="New messages"
         >
