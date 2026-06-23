@@ -47,8 +47,11 @@ RUN npm run build
 # Go back to root
 WORKDIR /var/www/html
 
+# Create sqlite database and run migrations during build to avoid fresh migration at runtime
+RUN touch database/database.sqlite && php artisan migrate --force
+
 # Set Permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
-# Start Apache
-CMD touch database/database.sqlite && php artisan migrate --force && chown -R www-data:www-data /var/www/html/database && apache2-foreground
+# Start Apache (Run any new migrations, then start)
+CMD php artisan migrate --force && chown -R www-data:www-data /var/www/html/database && apache2-foreground
