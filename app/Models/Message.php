@@ -53,17 +53,19 @@ class Message extends Model
 
     public function getFormattedTimeAttribute(): string
     {
-        return $this->created_at->format('H:i');
+        return $this->created_at->timezone('Asia/Kolkata')->format('H:i');
     }
 
     public function getFormattedDateAttribute(): string
     {
-        if ($this->created_at->isToday()) {
-            return 'Today at ' . $this->created_at->format('H:i');
+        $istTime = $this->created_at->timezone('Asia/Kolkata');
+        
+        if ($istTime->isToday()) {
+            return 'Today at ' . $istTime->format('H:i');
         }
-        if ($this->created_at->isYesterday()) {
-            return 'Yesterday at ' . $this->created_at->format('H:i');
+        if ($istTime->isYesterday()) {
+            return 'Yesterday at ' . $istTime->format('H:i');
         }
-        return $this->created_at->format('M d, Y H:i');
+        return $istTime->format('M d, Y H:i');
     }
 }

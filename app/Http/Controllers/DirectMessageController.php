@@ -41,9 +41,9 @@ class DirectMessageController extends Controller
                 'is_mine'    => $m->sender_id === $me,
                 'is_ai'      => (bool) $m->is_ai,
                 'attachments'=> $m->attachments,
-                'read_at'    => $m->read_at ? $m->read_at->format('Y-m-d H:i:s') : null,
-                'created_at' => $m->created_at->format('H:i'),
-                'date'       => $m->created_at->diffForHumans(),
+                'read_at'    => $m->read_at ? $m->read_at->timezone('Asia/Kolkata')->format('Y-m-d H:i:s') : null,
+                'created_at' => $m->created_at->timezone('Asia/Kolkata')->format('H:i'),
+                'date'       => $m->created_at->timezone('Asia/Kolkata')->diffForHumans(),
             ]);
 
         $isTyping = Cache::has("typing_{$userId}_{$me}");
@@ -87,8 +87,8 @@ class DirectMessageController extends Controller
             'is_ai'      => false,
             'attachments'=> $msg->attachments,
             'read_at'    => null,
-            'created_at' => $msg->created_at->format('H:i'),
-            'date'       => $msg->created_at->diffForHumans(),
+            'created_at' => $msg->created_at->timezone('Asia/Kolkata')->format('H:i'),
+            'date'       => $msg->created_at->timezone('Asia/Kolkata')->diffForHumans(),
         ], 201);
     }
 
@@ -210,7 +210,7 @@ class DirectMessageController extends Controller
                 'sender_id'    => $m->sender_id,
                 'sender_name'  => $m->sender->name,
                 'sender_email' => $m->sender->email,
-                'created_at'   => $m->created_at->format('H:i'),
+                'created_at'   => $m->created_at->timezone('Asia/Kolkata')->format('H:i'),
             ]);
 
         return response()->json(['messages' => $messages]);
