@@ -454,7 +454,7 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
               placeholder={`Message ${peer.name}… (use @gpt for AI reply)`}
               className="w-full bg-transparent text-[#ececf1] placeholder-gray-400 text-[15px] px-3 py-2.5 resize-none outline-none leading-relaxed max-h-[180px]"
             />
-            <div className="flex items-center gap-1 mb-1 mr-1 relative">
+            <div className="flex items-center gap-1 mb-1 mr-1 relative flex-shrink-0">
               {/* Emoji Picker Dropdown */}
               {isEmojiOpen && (
                 <div className="absolute bottom-12 right-0 z-50 shadow-2xl" style={{ animation: 'fadeSlideUp 0.2s ease-out' }}>
