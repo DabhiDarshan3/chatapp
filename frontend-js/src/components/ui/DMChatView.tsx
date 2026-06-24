@@ -451,8 +451,8 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
               value={text}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
-              placeholder={`Message ${peer.name}… (use @gpt for AI reply)`}
-              className="w-full bg-transparent text-[#ececf1] placeholder-gray-400 text-[15px] px-3 py-2.5 resize-none outline-none leading-relaxed max-h-[180px]"
+              placeholder="Message..."
+              className="w-full bg-transparent text-[#ececf1] placeholder-gray-400 text-[15px] px-3 py-2.5 resize-none outline-none leading-relaxed max-h-[180px] overflow-hidden"
             />
             <div className="flex items-center gap-1 mb-1 mr-1 relative flex-shrink-0">
               {/* Emoji Picker Dropdown */}

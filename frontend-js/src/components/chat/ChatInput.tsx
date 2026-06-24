@@ -135,7 +135,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
               onKeyDown={handleKeyDown}
               placeholder="Ask anything"
               className="w-full bg-transparent text-[#ececf1] placeholder-gray-400
-                         text-[15px] px-3 py-2.5 resize-none outline-none leading-relaxed max-h-[200px]"
+                         text-[15px] px-3 py-2.5 resize-none outline-none leading-relaxed max-h-[200px] overflow-hidden"
             />
 
           <div className="flex items-center gap-1 mb-1 mr-1 flex-shrink-0">
