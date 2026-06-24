@@ -138,7 +138,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
                          text-[15px] px-3 py-2.5 resize-none outline-none leading-relaxed max-h-[200px]"
             />
 
-          <div className="flex items-center gap-1 mb-1 mr-1">
+          <div className="flex items-center gap-1 mb-1 mr-1 flex-shrink-0">
             {!hasText && !disabled && (
               <button className="p-2 text-gray-400 hover:text-white transition-colors flex-shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

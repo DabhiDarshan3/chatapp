@@ -82,7 +82,7 @@ export default function Header() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {user ? (
             /* Logged-in user controls */
             <>
@@ -152,13 +152,13 @@ export default function Header() {
             <>
               <button
                 onClick={openAuthModal}
-                className="px-4 py-1.5 rounded-full text-sm font-semibold text-white bg-[#2f2f2f] hover:bg-[#404040] border border-white/10 transition-colors"
+                className="px-4 py-1.5 rounded-full text-sm font-semibold text-white bg-[#2f2f2f] hover:bg-[#404040] border border-white/10 transition-colors whitespace-nowrap"
               >
                 Log in
               </button>
               <button
                 onClick={openAuthModal}
-                className="px-4 py-1.5 rounded-full text-sm font-semibold text-black bg-white hover:bg-gray-100 transition-colors"
+                className="px-4 py-1.5 rounded-full text-sm font-semibold text-black bg-white hover:bg-gray-100 transition-colors whitespace-nowrap"
               >
                 Sign up for free
               </button>
