@@ -44,11 +44,24 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
   const [isGifOpen, setIsGifOpen] = useState(false)
   const [gifSearch, setGifSearch] = useState('')
   const [gifs, setGifs] = useState<string[]>([])
+  const [peerIsTyping, setPeerIsTyping] = useState(false)
+  
+  const lastTypingTimeRef = useRef<number>(0)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const isScrolledUpRef = useRef(false)
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const handleScroll = useCallback(() => {
+    if (!chatContainerRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current
+    // If we are more than 100px from the bottom, consider it scrolled up
+    isScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100
+  }, [])
 
   const peerColor = getAvatarColor(peer.name)
   const myColor = user ? getAvatarColor(user.name) : { bg: '#555', text: '#fff' }
@@ -62,7 +75,14 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
         credentials: 'same-origin',
       })
       const data = await res.json()
-      setMessages(data.messages ?? [])
+      
+      setMessages(prev => {
+        // Preserve any optimistic messages (id > 1000000000000) that haven't been saved yet
+        const optimistic = prev.filter(m => m.id > 1000000000000)
+        return [...(data.messages ?? []), ...optimistic]
+      })
+      
+      setPeerIsTyping(!!data.is_typing)
     } catch {
       //
     } finally {
@@ -79,8 +99,11 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
 
   // ── Scroll to bottom ───────────────────────────────────────────
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isAiThinking])
+    // Only auto-scroll if the user hasn't manually scrolled up
+    if (!isScrolledUpRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, isAiThinking, peerIsTyping])
 
   // ── Giphy API ──────────────────────────────────────────────────
   const searchGifs = useCallback(async (q: string) => {
@@ -115,6 +138,9 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
     setIsEmojiOpen(false)
     setIsGifOpen(false)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    
+    // Force scroll to bottom when sending
+    isScrolledUpRef.current = false
 
     const hasGpt = GPT_PATTERN.test(trimmed)
     const attachmentsPayload = attachment ? [attachment] : undefined
@@ -134,7 +160,7 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
 
     try {
       // 1. Store DM
-      await fetch(`/api/dm/${peer.id}`, {
+      const res = await fetch(`/api/dm/${peer.id}`, {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
@@ -144,6 +170,10 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
         },
         body: JSON.stringify({ body: trimmed, attachments: attachmentsPayload }),
       })
+      const savedMsg = await res.json()
+
+      // Swap optimistic message with the real one from DB to keep key stable
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? savedMsg : m))
 
       // 2. If @gpt detected — call AI endpoint
       if (hasGpt) {
@@ -178,7 +208,22 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
 
   const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value)
-  }, [])
+    
+    // Notify backend that we are typing (throttle to every 2 seconds)
+    const now = Date.now()
+    if (now - lastTypingTimeRef.current > 2000) {
+      lastTypingTimeRef.current = now
+      fetch(`/api/dm/${peer.id}/typing`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': getCsrf(),
+        },
+      }).catch(() => {})
+    }
+  }, [peer.id])
 
   const hasText = text.trim().length > 0
 
@@ -228,7 +273,11 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
       </header>
 
       {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div 
+        className="flex-1 overflow-y-auto px-4 py-6" 
+        ref={chatContainerRef}
+        onScroll={handleScroll}
+      >
         {isLoading ? (
           <div className="flex items-center justify-center h-full gap-3">
             <div className="w-5 h-5 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
@@ -344,6 +393,23 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
                   </svg>
                 </div>
                 <div className="flex gap-1 pt-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Peer is typing indicator */}
+            {peerIsTyping && (
+              <div className="flex items-end gap-2.5">
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
+                  style={{ backgroundColor: peerColor.bg, color: peerColor.text }}
+                >
+                  {getAvatarInitial(peer.name)}
+                </div>
+                <div className="bg-[#383838] px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1.5 h-[42px]">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />

@@ -45,3 +45,4 @@ Route::get('/dm/unread',           [DirectMessageController::class, 'unread'])  
 Route::get('/dm/{userId}',         [DirectMessageController::class, 'index'])   ->name('dm.index');
 Route::post('/dm/{userId}',        [DirectMessageController::class, 'store'])   ->name('dm.store');
 Route::post('/dm/{userId}/gpt',    [DirectMessageController::class, 'gptReply'])->name('dm.gpt');
+Route::post('/dm/{userId}/typing', [DirectMessageController::class, 'typing'])  ->name('dm.typing');

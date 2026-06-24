@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 class DirectMessageController extends Controller
 {
@@ -45,7 +46,12 @@ class DirectMessageController extends Controller
                 'date'       => $m->created_at->diffForHumans(),
             ]);
 
-        return response()->json(['messages' => $messages]);
+        $isTyping = Cache::has("typing_{$userId}_{$me}");
+
+        return response()->json([
+            'messages' => $messages,
+            'is_typing' => $isTyping
+        ]);
     }
 
     /**
@@ -208,5 +214,18 @@ class DirectMessageController extends Controller
             ]);
 
         return response()->json(['messages' => $messages]);
+    }
+
+    /**
+     * POST /api/dm/{userId}/typing
+     * Set typing status for the current user sending to {userId}
+     */
+    public function typing(Request $request, int $userId): JsonResponse
+    {
+        $me = Auth::id();
+        // Set a short cache key. It will expire in 4 seconds.
+        Cache::put("typing_{$me}_{$userId}", true, 4);
+
+        return response()->json(['status' => 'ok']);
     }
 }
