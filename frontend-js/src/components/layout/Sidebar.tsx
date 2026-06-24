@@ -220,9 +220,9 @@ export default function Sidebar() {
         </div>
       )}
 
+    </aside>
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <UsersPanel isOpen={isUsersPanelOpen} onClose={() => setIsUsersPanelOpen(false)} />
-    </aside>
     </>
   )
 }
