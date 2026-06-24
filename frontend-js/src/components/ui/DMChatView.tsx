@@ -107,18 +107,37 @@ export default function DMChatView({ peer, onClose }: DMChatViewProps) {
 
   // ── Giphy API ──────────────────────────────────────────────────
   const searchGifs = useCallback(async (q: string) => {
+    const cacheKey = `giphy_cache_${q.trim().toLowerCase()}`
+    try {
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        // Cache for 24 hours (86400000 ms)
+        if (Date.now() - parsed.timestamp < 86400000 && parsed.urls) {
+          setGifs(parsed.urls)
+          return
+        }
+      }
+    } catch { /* ignore parse error */ }
+
     const endpoint = q 
       ? `https://api.giphy.com/v1/gifs/search?api_key=jWTyzO4PMklXZdy6GBCzy4PzUdeQq7uU&q=${encodeURIComponent(q)}&limit=20`
       : `https://api.giphy.com/v1/gifs/trending?api_key=jWTyzO4PMklXZdy6GBCzy4PzUdeQq7uU&limit=20`
     try {
       const res = await fetch(endpoint)
       const data = await res.json()
-      setGifs(data.data.map((g: any) => g.images.fixed_height.url))
+      const urls = data.data.map((g: any) => g.images.fixed_height.url)
+      setGifs(urls)
+      localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), urls }))
     } catch { /* ignore */ }
   }, [])
 
   useEffect(() => {
-    if (isGifOpen) searchGifs(gifSearch)
+    if (!isGifOpen) return
+    const timeoutId = setTimeout(() => {
+      searchGifs(gifSearch)
+    }, gifSearch ? 500 : 0) // Debounce typing by 500ms, but load trending immediately
+    return () => clearTimeout(timeoutId)
   }, [isGifOpen, gifSearch, searchGifs])
 
   // ── Auto-resize textarea ───────────────────────────────────────
